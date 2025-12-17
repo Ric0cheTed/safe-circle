@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, User, Phone, Heart, Trash2, Edit2, X, Check } from "lucide-react";
+import { ArrowLeft, Plus, User, Phone, Heart, Trash2, Edit2, Loader2 } from "lucide-react";
 import MobileLayout from "@/components/layout/MobileLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Contact {
   id: string;
@@ -50,15 +52,44 @@ const relationships = [
 
 const TrustedContacts = () => {
   const navigate = useNavigate();
-  const [contacts, setContacts] = useState<Contact[]>([
-    { id: "1", name: "Sarah Johnson", phone: "+44 7700 900123", relationship: "Partner" },
-    { id: "2", name: "David Smith", phone: "+44 7700 900456", relationship: "Parent" },
-  ]);
+  const { user, isAuthenticated } = useAuth();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [formData, setFormData] = useState({ name: "", phone: "", relationship: "" });
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      navigate("/auth");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  // Fetch contacts from database
+  useEffect(() => {
+    const fetchContacts = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from("trusted_contacts")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        toast.error("Failed to load contacts");
+        console.error(error);
+      } else {
+        setContacts(data || []);
+      }
+      setIsLoading(false);
+    };
+
+    fetchContacts();
+  }, [user]);
 
   const openAddDialog = () => {
     setEditingContact(null);
@@ -72,28 +103,63 @@ const TrustedContacts = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim() || !formData.phone.trim() || !formData.relationship) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    if (editingContact) {
-      setContacts(contacts.map(c => 
-        c.id === editingContact.id 
-          ? { ...c, ...formData }
-          : c
-      ));
-      toast.success("Contact updated");
-    } else {
-      const newContact: Contact = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setContacts([...contacts, newContact]);
-      toast.success("Contact added");
+    if (!user) {
+      toast.error("Please log in to save contacts");
+      return;
     }
-    setIsDialogOpen(false);
+
+    setIsSaving(true);
+
+    if (editingContact) {
+      const { error } = await supabase
+        .from("trusted_contacts")
+        .update({
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          relationship: formData.relationship,
+        })
+        .eq("id", editingContact.id);
+
+      if (error) {
+        toast.error("Failed to update contact");
+        console.error(error);
+      } else {
+        setContacts(contacts.map(c => 
+          c.id === editingContact.id 
+            ? { ...c, ...formData }
+            : c
+        ));
+        toast.success("Contact updated");
+        setIsDialogOpen(false);
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("trusted_contacts")
+        .insert({
+          user_id: user.id,
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          relationship: formData.relationship,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error("Failed to add contact");
+        console.error(error);
+      } else {
+        setContacts([...contacts, data]);
+        toast.success("Contact added");
+        setIsDialogOpen(false);
+      }
+    }
+    setIsSaving(false);
   };
 
   const confirmDelete = (contact: Contact) => {
@@ -101,14 +167,34 @@ const TrustedContacts = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDelete = () => {
-    if (contactToDelete) {
+  const handleDelete = async () => {
+    if (!contactToDelete) return;
+
+    const { error } = await supabase
+      .from("trusted_contacts")
+      .delete()
+      .eq("id", contactToDelete.id);
+
+    if (error) {
+      toast.error("Failed to remove contact");
+      console.error(error);
+    } else {
       setContacts(contacts.filter(c => c.id !== contactToDelete.id));
       toast.success("Contact removed");
     }
     setIsDeleteDialogOpen(false);
     setContactToDelete(null);
   };
+
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center min-h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MobileLayout>
+    );
+  }
 
   return (
     <MobileLayout>
@@ -262,11 +348,22 @@ const TrustedContacts = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={() => setIsDialogOpen(false)}
+                disabled={isSaving}
               >
                 Cancel
               </Button>
-              <Button className="flex-1" onClick={handleSave}>
-                {editingContact ? "Save Changes" : "Add Contact"}
+              <Button 
+                className="flex-1" 
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingContact ? (
+                  "Save Changes"
+                ) : (
+                  "Add Contact"
+                )}
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, Shield, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,32 @@ import Logo from '@/components/guardian/Logo';
 import SOSButton from '@/components/guardian/SOSButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSOS } from '@/contexts/SOSContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { activateSOS } = useSOS();
+  const [contactCount, setContactCount] = useState(0);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  // Fetch contact count
+  useEffect(() => {
+    const fetchContactCount = async () => {
+      if (!user) return;
+      const { count } = await supabase
+        .from('trusted_contacts')
+        .select('*', { count: 'exact', head: true });
+      setContactCount(count || 0);
+    };
+    fetchContactCount();
+  }, [user]);
 
   const handleSOSActivate = () => {
     activateSOS();
@@ -45,7 +66,7 @@ const Home: React.FC = () => {
       {/* Welcome section */}
       <div className="text-center animate-fade-in">
         <p className="text-muted-foreground">
-          Hello, <span className="text-foreground font-medium">{user?.name || 'there'}</span>
+          Hello, <span className="text-foreground font-medium">{user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'}</span>
         </p>
         <h1 className="text-2xl font-display font-bold text-foreground mt-1">
           You're Protected
@@ -91,7 +112,7 @@ const Home: React.FC = () => {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Guardian Circle Active</p>
-            <p className="text-xs text-muted-foreground">3 trusted contacts ready to receive alerts</p>
+            <p className="text-xs text-muted-foreground">{contactCount} trusted contact{contactCount !== 1 ? 's' : ''} ready to receive alerts</p>
           </div>
           <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,31 +16,44 @@ const Auth: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const navigate = useNavigate();
-  const { login, register, isLoading } = useAuth();
+  const { login, register, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      if (isLogin) {
-        await login(email, password);
+    let result;
+    if (isLogin) {
+      result = await login(email, password);
+      if (!result.error) {
         toast({
           title: "Welcome back",
           description: "You're now signed in to Guardian Circle",
         });
-      } else {
-        await register(email, password, name);
+        navigate('/home');
+      }
+    } else {
+      result = await register(email, password, name);
+      if (!result.error) {
         toast({
           title: "Account created",
           description: "Welcome to Guardian Circle",
         });
+        navigate('/home');
       }
-      navigate('/home');
-    } catch (error) {
+    }
+
+    if (result.error) {
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: result.error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     }
