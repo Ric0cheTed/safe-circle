@@ -19,9 +19,9 @@ const Home: React.FC = () => {
   };
 
   const quickActions = [
-    { icon: Users, label: 'Contacts', description: 'Manage trusted contacts' },
-    { icon: Bell, label: 'Alerts', description: 'Check-in reminders' },
-    { icon: Shield, label: 'Safety Tips', description: 'Stay informed' },
+    { icon: Users, label: 'Contacts', description: 'Manage trusted contacts', path: '/contacts' },
+    { icon: Bell, label: 'Alerts', description: 'Check-in reminders', path: null },
+    { icon: Shield, label: 'Safety Tips', description: 'Stay informed', path: null },
   ];
 
   return (
@@ -69,6 +69,7 @@ const Home: React.FC = () => {
           {quickActions.map((action) => (
             <button
               key={action.label}
+              onClick={() => action.path && navigate(action.path)}
               className="gradient-card rounded-2xl p-4 shadow-card border border-border/50 hover:border-primary/30 transition-all duration-200 group"
             >
               <div className="flex flex-col items-center gap-2">
