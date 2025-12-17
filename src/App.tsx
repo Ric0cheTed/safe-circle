@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import ActiveSOS from "./pages/ActiveSOS";
 import SafeConfirmation from "./pages/SafeConfirmation";
+import TrustedContacts from "./pages/TrustedContacts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/home" element={<Home />} />
               <Route path="/active-sos" element={<ActiveSOS />} />
               <Route path="/safe-confirmation" element={<SafeConfirmation />} />
+              <Route path="/contacts" element={<TrustedContacts />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
