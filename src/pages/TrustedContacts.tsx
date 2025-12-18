@@ -154,13 +154,6 @@ const TrustedContacts = () => {
     setPhoneError("");
     setIsDialogOpen(true);
   };
-  };
-
-  const openEditDialog = (contact: Contact) => {
-    setEditingContact(contact);
-    setFormData({ name: contact.name, phone: contact.phone, relationship: contact.relationship });
-    setIsDialogOpen(true);
-  };
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.phone.trim() || !formData.relationship) {
