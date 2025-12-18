@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Shield, Users, Bell } from 'lucide-react';
+import { Settings, Shield, Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MobileLayout from '@/components/layout/MobileLayout';
 import Logo from '@/components/guardian/Logo';
@@ -41,7 +41,7 @@ const Home: React.FC = () => {
 
   const quickActions = [
     { icon: Users, label: 'Contacts', description: 'Manage trusted contacts', path: '/contacts' },
-    { icon: Bell, label: 'Alerts', description: 'Check-in reminders', path: null },
+    { icon: Clock, label: 'Check-In', description: 'Safety timer', path: '/check-in' },
     { icon: Shield, label: 'Safety Tips', description: 'Stay informed', path: null },
   ];
 

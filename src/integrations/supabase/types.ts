@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      checkin_timers: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          expires_at: string
+          id: string
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          expires_at: string
+          id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          expires_at?: string
+          id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trusted_contacts: {
         Row: {
           created_at: string
