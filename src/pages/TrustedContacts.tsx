@@ -61,6 +61,56 @@ const TrustedContacts = () => {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [formData, setFormData] = useState({ name: "", phone: "", relationship: "" });
+  const [phoneError, setPhoneError] = useState("");
+
+  // UK phone number validation
+  const validateUKPhoneNumber = (phone: string): { isValid: boolean; error: string } => {
+    // Remove all spaces, dashes, and parentheses
+    const cleaned = phone.replace(/[\s\-\(\)]/g, "");
+    
+    // Check if empty
+    if (!cleaned) {
+      return { isValid: false, error: "Phone number is required" };
+    }
+
+    // UK phone patterns:
+    // +44XXXXXXXXXX (11 digits after +44)
+    // 0XXXXXXXXXX (11 digits starting with 0)
+    const ukMobileWithCountryCode = /^\+44[1-9]\d{9}$/;
+    const ukMobileWithZero = /^0[1-9]\d{9}$/;
+    const ukMobileWithCountryCodeParens = /^(?:\(?\+44\)?|0044)[1-9]\d{9}$/;
+
+    if (ukMobileWithCountryCode.test(cleaned) || 
+        ukMobileWithZero.test(cleaned) || 
+        ukMobileWithCountryCodeParens.test(cleaned.replace(/[\(\)]/g, ""))) {
+      return { isValid: true, error: "" };
+    }
+
+    // More specific error messages
+    if (cleaned.startsWith("+") && !cleaned.startsWith("+44")) {
+      return { isValid: false, error: "Please enter a UK number starting with +44 or 0" };
+    }
+
+    if (cleaned.length < 10) {
+      return { isValid: false, error: "Phone number is too short" };
+    }
+
+    if (cleaned.length > 13) {
+      return { isValid: false, error: "Phone number is too long" };
+    }
+
+    return { isValid: false, error: "Please enter a valid UK phone number (e.g., 07700 900123 or +44 7700 900123)" };
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData({ ...formData, phone: value });
+    if (value.trim()) {
+      const validation = validateUKPhoneNumber(value);
+      setPhoneError(validation.error);
+    } else {
+      setPhoneError("");
+    }
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -94,7 +144,16 @@ const TrustedContacts = () => {
   const openAddDialog = () => {
     setEditingContact(null);
     setFormData({ name: "", phone: "", relationship: "" });
+    setPhoneError("");
     setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({ name: contact.name, phone: contact.phone, relationship: contact.relationship });
+    setPhoneError("");
+    setIsDialogOpen(true);
+  };
   };
 
   const openEditDialog = (contact: Contact) => {
@@ -106,6 +165,13 @@ const TrustedContacts = () => {
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.phone.trim() || !formData.relationship) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    const phoneValidation = validateUKPhoneNumber(formData.phone);
+    if (!phoneValidation.isValid) {
+      setPhoneError(phoneValidation.error);
+      toast.error(phoneValidation.error);
       return;
     }
 
@@ -320,10 +386,14 @@ const TrustedContacts = () => {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="e.g., +44 7700 900123"
+                placeholder="e.g., 07700 900123 or +44 7700 900123"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                className={phoneError ? "border-destructive" : ""}
               />
+              {phoneError && (
+                <p className="text-sm text-destructive">{phoneError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="relationship">Relationship</Label>
