@@ -58,13 +58,15 @@ const CheckIn = () => {
         supabase
           .from("checkin_timers")
           .select("*")
+          .eq("user_id", user.id)
           .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase
           .from("trusted_contacts")
-          .select("id", { count: "exact" })
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
       ]);
 
       if (timerResult.error) {
@@ -84,6 +86,19 @@ const CheckIn = () => {
 
     fetchData();
   }, [user]);
+
+  const handleExpired = useCallback(async () => {
+    if (!activeTimer || !user) return;
+
+    await supabase
+      .from("checkin_timers")
+      .update({ status: "expired" })
+      .eq("id", activeTimer.id)
+      .eq("user_id", user.id);
+
+    setActiveTimer(null);
+    toast.error("Timer expired! Your trusted contacts would be alerted.");
+  }, [activeTimer, user]);
 
   // Update time remaining every second
   useEffect(() => {
@@ -108,19 +123,7 @@ const CheckIn = () => {
     const interval = setInterval(updateTimeRemaining, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTimer]);
-
-  const handleExpired = useCallback(async () => {
-    if (!activeTimer) return;
-
-    await supabase
-      .from("checkin_timers")
-      .update({ status: "expired" })
-      .eq("id", activeTimer.id);
-
-    setActiveTimer(null);
-    toast.error("Timer expired! Your trusted contacts would be alerted.");
-  }, [activeTimer]);
+  }, [activeTimer, handleExpired]);
 
   const startTimer = async () => {
     if (!user) {
@@ -164,14 +167,15 @@ const CheckIn = () => {
   };
 
   const checkIn = async () => {
-    if (!activeTimer) return;
+    if (!activeTimer || !user) return;
 
     setIsSaving(true);
 
     const { error } = await supabase
       .from("checkin_timers")
       .update({ status: "checked_in" })
-      .eq("id", activeTimer.id);
+      .eq("id", activeTimer.id)
+      .eq("user_id", user.id);
 
     if (error) {
       toast.error("Failed to check in");
@@ -185,14 +189,15 @@ const CheckIn = () => {
   };
 
   const cancelTimer = async () => {
-    if (!activeTimer) return;
+    if (!activeTimer || !user) return;
 
     setIsSaving(true);
 
     const { error } = await supabase
       .from("checkin_timers")
       .update({ status: "cancelled" })
-      .eq("id", activeTimer.id);
+      .eq("id", activeTimer.id)
+      .eq("user_id", user.id);
 
     if (error) {
       toast.error("Failed to cancel timer");

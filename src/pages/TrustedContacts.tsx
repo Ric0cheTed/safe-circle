@@ -66,7 +66,7 @@ const TrustedContacts = () => {
   // UK phone number validation
   const validateUKPhoneNumber = (phone: string): { isValid: boolean; error: string } => {
     // Remove all spaces, dashes, and parentheses
-    const cleaned = phone.replace(/[\s\-\(\)]/g, "");
+    const cleaned = phone.replace(/[\s()-]/g, "");
     
     // Check if empty
     if (!cleaned) {
@@ -82,7 +82,7 @@ const TrustedContacts = () => {
 
     if (ukMobileWithCountryCode.test(cleaned) || 
         ukMobileWithZero.test(cleaned) || 
-        ukMobileWithCountryCodeParens.test(cleaned.replace(/[\(\)]/g, ""))) {
+        ukMobileWithCountryCodeParens.test(cleaned.replace(/[()]/g, ""))) {
       return { isValid: true, error: "" };
     }
 
@@ -127,6 +127,7 @@ const TrustedContacts = () => {
       const { data, error } = await supabase
         .from("trusted_contacts")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -183,7 +184,8 @@ const TrustedContacts = () => {
           phone: formData.phone.trim(),
           relationship: formData.relationship,
         })
-        .eq("id", editingContact.id);
+        .eq("id", editingContact.id)
+        .eq("user_id", user.id);
 
       if (error) {
         toast.error("Failed to update contact");
@@ -232,7 +234,8 @@ const TrustedContacts = () => {
     const { error } = await supabase
       .from("trusted_contacts")
       .delete()
-      .eq("id", contactToDelete.id);
+      .eq("id", contactToDelete.id)
+      .eq("user_id", user.id);
 
     if (error) {
       toast.error("Failed to remove contact");
